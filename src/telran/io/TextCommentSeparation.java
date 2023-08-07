@@ -1,40 +1,35 @@
 package telran.io;
 
 import java.io.*;
+import java.util.stream.Collectors;
+import java.util.*;
 
 public class TextCommentSeparation {
-	private static final String pattern = "//";
+	//private static final String pattern = "//";
+	private static final String COMMENTS = "comments";
+	private static final String TEXT = "text";
+	
 	public static void main(String[] args) {
 		
-		if(args.length != 3) {
-			System.out.println("Usage: must be three arguments "
-					+ "(source, destination1, destination2)");
+		if(args.length < 3) {
+			System.out.println("Usage: must be three arguments");
 		} else {
-			try(BufferedReader reader = 
-					new BufferedReader(new FileReader(args[0]));
-				PrintWriter outputNoCom = new PrintWriter(args[1]);
-				PrintWriter outputCom = new PrintWriter(args[2])) {
-				inputOutput(reader, outputNoCom, outputCom);
-			} catch (Exception e) {
-				System.out.println(e.getMessage());
+			try(BufferedReader reader = new BufferedReader(new FileReader(args[0]));
+				PrintWriter text = new PrintWriter(args[1]);
+				PrintWriter comments = new PrintWriter(args[2])) {
+				
+				Map<String, List<String>> map = reader.lines()
+						.collect(Collectors
+								.groupingBy(s -> s.trim().startsWith("//") ? 
+										COMMENTS : TEXT));
+				map.getOrDefault(COMMENTS, Collections.emptyList())
+				.forEach(comments::println);
+				map.getOrDefault(TEXT, Collections.emptyList())
+				.forEach(text::println);
+			
+			}catch(IOException e) {
+			System.out.println(e.getMessage());
 			}
-		}
+		} 
 	}
-
-	private static void inputOutput(BufferedReader reader,
-			PrintWriter outputNoCom, PrintWriter outputCom) {
-		reader.lines().forEach(line -> getOutput(line, outputNoCom, outputCom));
-		outputCom.close();
-		outputNoCom.close();
-	}
-	
-	//using regex to no consider spaces that may be before "//"  
-	private static void getOutput(String line, PrintWriter outputNoCom, PrintWriter outputCom) {
-		if(line.replaceAll("^\\s+", "").substring(0, 2).equals(pattern)) {
-			outputNoCom.println(line);
-		} else {
-			outputCom.println(line);
-		}	
-	}
-	
 }
