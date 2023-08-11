@@ -3,6 +3,9 @@ package telran.employees.test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDate;
+import java.time.MonthDay;
+import java.time.Period;
+import java.time.Year;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -21,7 +24,7 @@ class CompanyTest {
 	private static final int YEAR1 = 2000; 
 	private static final LocalDate DATE1 = LocalDate.ofYearDay(YEAR1, 100);
 	private static final long ID2 = 124;
-	private static final long ID3 = 125;
+	private static final long ID3 = 125; //125
 	private static final long ID4 = 126;
 	private static final long ID5 = 127;
 	private static final String DEP2 = "dep2";
@@ -37,7 +40,7 @@ class CompanyTest {
 	private static final int INTERVAL = 5000;
 	Employee empl1 = new Employee(ID1, "name", DEP1, SALARY1, DATE1);
 	Employee empl2 = new Employee(ID2, "name", DEP2, SALARY2, DATE2);
-	Employee empl3 = new Employee(ID3, "name", DEP1, SALARY1, DATE1);
+	Employee empl3 = new Employee(ID3, "name", DEP1, SALARY1, DATE1); 
 	Employee empl4 = new Employee(ID4, "name", DEP2, SALARY2, DATE2);
 	Employee empl5 = new Employee(ID5, "name", DEP3, SALARY3, DATE3);
 	Employee[] employees = {empl1, empl2, empl3, empl4, empl5}; 
@@ -48,7 +51,6 @@ class CompanyTest {
 		company = new CompanyImpl();
 		for(Employee empl: employees) {
 			company.addEmployee(empl);
-			
 		}
 	}
 
@@ -86,28 +88,62 @@ class CompanyTest {
 				new DepartmentSalary(DEP1, SALARY1),
 				new DepartmentSalary(DEP3, SALARY3)
 				};
-		DepartmentSalary[] depSal = company.getDepartmentSalaryDistribution()
+		DepartmentSalary[] actual = company.getDepartmentSalaryDistribution()
+				.stream().sorted((ds1, ds2) -> Double.compare(ds1.salary(), ds2.salary()))
 				.toArray(DepartmentSalary[]::new);
-		Arrays.sort(depSal, Comparator.comparing(DepartmentSalary::salary)
-				.thenComparing(DepartmentSalary::department));
-		assertArrayEquals(expected, depSal);
+		assertArrayEquals(expected, actual);
 	}
 
 	@Test
 	void testGetSalaryDistribution() {
-		List<SalaryDistribution> companySalaryDistr = 
-				 company.getSalaryDistribution(INTERVAL);
-		
-		companySalaryDistr.forEach(salaryDistr -> System.out.println(salaryDistr.toString()));
-		assertEquals(3, companySalaryDistr.size());
-		assertEquals(2, companySalaryDistr.get(0).amountEmployees());
-		assertEquals(1, companySalaryDistr.get(2).amountEmployees());
-		assertEquals(SALARY2, companySalaryDistr.get(0).minSalary());
-		assertEquals(SALARY3, companySalaryDistr.get(companySalaryDistr.size() - 1)
-				.minSalary());
-		
+		int interval = 5000; 
+		SalaryDistribution[] expected = {
+				new SalaryDistribution(SALARY2, SALARY2 + interval - 1, 2),
+				new SalaryDistribution(SALARY1, SALARY1 + interval - 1, 3),
+				new SalaryDistribution(SALARY3, SALARY3 + interval - 1, 1)
+		};
+		company.addEmployee(new Employee(ID_NOT_EXIST, "name", DEP2, 13000, DATE1));
+		SalaryDistribution[] actual = company.getSalaryDistribution(interval)
+				.toArray(SalaryDistribution[]::new);
+		assertArrayEquals(expected, actual);
 	}
+	
+	@Test
+	void testGetEmployeesBySalary() {      //sal2 - sal1:  5000 - 10000: empl2, empl4, empl1, empl3
+		Employee[] expected = {empl2, empl4, empl1, empl3};
+	
+		Employee[] actual = (Employee[]) company.getEmployeesBySalary(SALARY2, SALARY1)
+				.toArray(Employee[]::new);
+		assertArrayEquals(expected, actual);
+		assertTrue(company.getEmployeesBySalary(4000, 4999).isEmpty());
+		assertEquals(5, company.getEmployeesBySalary(SALARY2, SALARY3).size());
+	}
+	
+	@Test
+	void testGetEmployeesByDepartment() {
+		Employee[] expected = {empl3, empl1, new Employee(ID_NOT_EXIST, "name", DEP1, SALARY3, DATE1)};
+		company.addEmployee(new Employee(ID_NOT_EXIST, "name", DEP1, SALARY3, DATE1));
+		assertArrayEquals(expected, company.getEmployeesByDepartment(DEP1)
+				.toArray(Employee[]::new));
+		
+		assertThrows(IllegalArgumentException.class, 
+				() -> company.getEmployeesByDepartment("no dep"));
+	}
+	
+	@Test
+	void testGetEmployeesByAge() {
 
+		//DATE1 = 23. DATE2 = 33, DATE3 = 20
+		System.out.println(company.getEmployeesByAge(23, 33));
+		Employee[] expected = {empl3, empl1, empl4, empl2};
+		assertArrayEquals(expected, company.getEmployeesByAge(23, 33).toArray(Employee[]::new));
+		Employee[] expected2 = {empl5};
+		assertArrayEquals(expected2, company.getEmployeesByAge(20, 20).toArray(Employee[]::new));
+		assertTrue(company.getEmployeesByAge(40, 50).isEmpty());
+		assertThrows(IllegalArgumentException.class, 
+				() -> company.getEmployeesByAge(25, 20));
+	}
+	
 	@Test
 	@Order(2)
 	void testRestore() {

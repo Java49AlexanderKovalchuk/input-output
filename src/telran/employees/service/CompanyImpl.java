@@ -1,11 +1,9 @@
 package telran.employees.service;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.*;
-import java.util.Map.Entry;
+
 import java.util.stream.Collectors;
 
 import telran.employees.dto.DepartmentSalary;
@@ -13,18 +11,81 @@ import telran.employees.dto.Employee;
 import telran.employees.dto.SalaryDistribution;
 
 public class CompanyImpl implements Company {
+	
+	private static final LocalDate CURRENT_DATE = LocalDate.now();
 	LinkedHashMap<Long, Employee> employees = new LinkedHashMap<>(); 
+	TreeMap<Integer, Collection<Employee>> employeesSalary = new TreeMap<>();
+	HashMap<String, Collection<Employee>> employeesDepartment = new HashMap<>();
+	TreeMap<Integer, Collection<Employee>> employeesAge = new TreeMap<>();
 	
 	@Override
 	public boolean addEmployee(Employee empl) {
-		
-		return employees.putIfAbsent(empl.id(), empl) == null;
+		boolean res = false;
+		Employee emplRes = employees.putIfAbsent(empl.id(), empl); 
+		if(emplRes == null) {
+			res = true;
+			addEmployeeSalary(empl);
+			addEmployeeDepartment(empl);
+			addEmployeeAge(empl);
+		}
+		return res;
 	}
+
+	private void addEmployeeAge(Employee empl) {
+		int age = getAge(empl.birthDate());
+		employeesAge.computeIfAbsent(age, k -> new HashSet<>())
+		.add(empl);
+	}
+
+	private void addEmployeeDepartment(Employee empl) {
+		
+		String department = empl.department();
+		employeesDepartment.computeIfAbsent(department, k -> new HashSet<>())
+		.add(empl);
+	}
+
+	private void addEmployeeSalary(Employee empl) {
+		int salary = empl.salary();
+		employeesSalary.computeIfAbsent(salary, k -> new HashSet<>())
+		.add(empl);
+ 	}
 
 	@Override
 	public Employee removeEmployee(long id) {
-		
-		return employees.remove(id);
+		Employee res = employees.remove(id);
+		if(res != null) {
+			removeEmployeeSalary(res);
+			removeEmployeeDepartment(res);
+			removeEmployeeAge(res);
+		}
+		return res;
+	}
+ 
+	private void removeEmployeeAge(Employee empl) {
+		int age = getAge(empl.birthDate());
+		Collection<Employee> employeesCol = employeesAge.get(age);
+		employeesCol.remove(empl);
+		if(employeesCol.isEmpty()) {
+			employeesAge.remove(age);
+		}
+	}
+
+	private void removeEmployeeDepartment(Employee empl) {
+		String department = empl.department();
+		Collection<Employee> employeesCol = employeesDepartment.get(department);
+		employeesCol.remove(empl);
+		if(employeesCol.isEmpty()) {
+			employeesDepartment.remove(department);
+		}
+	}
+
+	private void removeEmployeeSalary(Employee empl) {
+		int salary = empl.salary();
+		Collection<Employee> employeesCol = employeesSalary.get(salary);
+		employeesCol.remove(empl);
+		if(employeesCol.isEmpty()) {
+			employeesSalary.remove(salary);
+		}
 	}
 
 	@Override
@@ -58,32 +119,59 @@ public class CompanyImpl implements Company {
 				.entrySet().stream()
 				.map(e -> new SalaryDistribution(e.getKey() * interval, 
 						e.getKey() * interval + interval - 1,
-						e.getValue().intValue())).toList();
-	
+						e.getValue().intValue()))
+				.sorted((sd1, sd2) -> Integer.compare(sd1.minSalary(), sd2.minSalary()))
+				.toList();
 	}
 
-	
-
 	@Override
-	public void restore(String filePath) {
-
-		try(ObjectInputStream input = new ObjectInputStream(new FileInputStream(filePath))) {
-			List<Employee> list = (ArrayList<Employee>) input.readObject();
-			list.stream().forEach(empl -> this.addEmployee(empl));
-		} catch (Exception e) {
-			throw new RuntimeException(e.getMessage());
+	public List<Employee> getEmployeesByDepartment(String department) {
+		if (employeesDepartment.get(department) == null) {
+			throw new IllegalArgumentException("department is not exist");
 		}
-	}
 
-	@Override
-	public void save(String filePath) {
 		
-		try(ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(filePath))) {
-			List<Employee> list = new ArrayList<>(employees.values());
-			output.writeObject(list);
-		} catch (Exception e) {
-			throw new RuntimeException(e.getMessage());
-		}
+		
+			return employeesDepartment.get(department)
+				.stream().sorted((empl1, empl2) -> Integer.compare(empl1.salary(), empl2.salary()))
+				.toList();
+		 	
+		
 	}
 
+	@Override
+	public List<Employee> getEmployeesBySalary(int salaryFrom, int salaryTo) {
+		
+		return employeesSalary.subMap(salaryFrom, true, salaryTo, true)
+				.values().stream().flatMap(col -> col.stream()
+						.sorted((empl1, empl2) -> Long.compare(empl1.id(), empl2.id())))				
+				.toList();
+	}
+
+	@Override
+	public List<Employee> getEmployeesByAge(int ageFrom, int ageTo) {
+		if(ageFrom > ageTo || ageFrom < 18 || ageTo > 100) {
+			throw new IllegalArgumentException("Wrong age");
+		}
+		return employeesAge.subMap(ageFrom, true,  ageTo, true)
+				.values().stream()
+				.flatMap(col -> col.stream().sorted((empl1, empl2) -> 
+				Integer.compare(empl1.salary(), empl2.salary()))).toList();
+	}
+
+	@Override
+	public Employee updateSalary(long id, int newSalary) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Employee updateDepartment(long id, String newDepartment) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	private int getAge(LocalDate birthDate) {
+		return Period.between(birthDate, CURRENT_DATE).getYears();
+	}
 }

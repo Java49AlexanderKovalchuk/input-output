@@ -1,3 +1,13 @@
 /bin/
 /.classpath
 /.project
+/bigFile
+/copyBigFile
+/smallFile.txt
+/numbers.txt
+/fileSource.txt
+/fileCom.txt
+/fileNoCom.txt
+/file.txt
+/text.txt
+/test.data
