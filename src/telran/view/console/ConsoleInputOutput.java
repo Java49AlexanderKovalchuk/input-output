@@ -83,44 +83,34 @@ public class ConsoleInputOutput {
 	public String readString(String prompt, String errorPrompt, Predicate<String> predicate) {
 		return readObject(prompt, errorPrompt,
 				string -> {
-					String res = string;
-					if(!predicate.test(string)) {
-						throw new IllegalArgumentException(string + 
-								" not contains needed symbol" );
+						if(!predicate.test(string)) {
+						throw new IllegalArgumentException("");
 					}
-					return res;
+					return string;
 				});
 	}
 	
 	public String readString(String prompt, String errorPrompt, Set<String> options) {
-	return readObject(String.format("%s %s", prompt, options ), errorPrompt, 
-				string -> {
-				String res = string;
-				if(!options.contains(string)) {
-					throw new IllegalArgumentException("entrered value not from " + options);
-				}
-				return res;
-				});
+	return readString(prompt, errorPrompt, options::contains); 
+				
 	}
 	
 	public LocalDate readDate(String prompt, String errorPrompt) {
 		return readObject(prompt, errorPrompt, LocalDate::parse);
 	}
 	
-	public LocalDate readDate(String prompt, String errorPrompt, LocalDate from, LocalDate to) {
-		return readObject(prompt, errorPrompt, 
-				string -> {
-					LocalDate res = LocalDate.parse(string);
-					if(res.isBefore(from)) {
-						throw new IllegalArgumentException("must be not before " + from);
-					}
-					if(res.isAfter(to)) {
-						throw new IllegalArgumentException("must be not after " + to);
-					}
-					return res;
-				});
+	public LocalDate readDate(String prompt, String errorPrompt,
+			LocalDate from, LocalDate to) {
+		
+		return readObject(prompt, errorPrompt, string -> {
+			LocalDate res = LocalDate.parse(string);
+			if(res.isBefore(from) || res.isAfter(to)) {
+				throw new IllegalArgumentException
+				(String.format("Date should be in the range from %s to %s", from, to));
+			}
+			return res;
+		});
 	}
-	
 	public double readDouble(String prompt, String errorPrompt) {
 		return readObject(prompt, errorPrompt, Double::parseDouble);
 	}
