@@ -23,8 +23,5 @@ public record Employee(long id, String name,
 		Employee other = (Employee) obj;
 		return id == other.id;
 	}
-// @Override
-// public boolean equals(Object obj) {
-//	 Employee empl 
-// }
+
 }
