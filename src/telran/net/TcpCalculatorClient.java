@@ -7,7 +7,7 @@ public class TcpCalculatorClient {
 	
 	static final String HOST = "localhost";
 	static final int PORT = 5000;
-	static Set<String> operatorSymbols = new LinkedHashSet<>(Arrays.asList("+", "-", "*", "/"));
+	
 	
 	public static void main(String[] args) throws Exception {
 		
@@ -16,28 +16,22 @@ public class TcpCalculatorClient {
 			BufferedReader rider = new BufferedReader(new InputStreamReader(socket.getInputStream()))){
 			InputOutput io = new ConsoleInputOutput();
 			
-			Menu menu = new Menu("TCP client calculator", Item.of("Send request to calculate", io1 -> {
-				String operator = io1.readString(String.format("Enter operator symbol: %s", operatorSymbols), 
-						"Wrong symbol", operatorSymbols);
-				String operand_1 = getOperandString(io1, "1st");
-				String operand_2 = getOperandString(io1, "2nd");
-				writer.println(String.format("%s#%s#%s", operator, operand_1, operand_2));
-				String response;
+			Menu menu = new Menu("Calculator Application", Item.of("send request", io1 -> {
+				HashSet<String> requests = new HashSet<>(Arrays.asList("add", "minus", 
+						"multiply", "divide"));
+				String requestType = io1.readString("Enter operation type " + requests, "Wrong operation", requests);
+				double op1 = io1.readDouble("Enter first number", "Wrong number");
+				double op2 = io1.readDouble("Enter second number", "Wrong number");
+				writer.println(String.format("%s#%f#%f", requestType, op1, op2));
 				try {
-					response = rider.readLine();
-					io1.writeLine("result: " + response);
-				} catch (IOException e) {
+					String response = rider.readLine();
+					io1.writeLine(response);
+				} catch(IOException e) {
 					throw new RuntimeException(e.toString());
 				}
-			
 			}), Item.ofExit());
 			menu.perform(io);
 		}
 	}
-
-	private static String getOperandString(InputOutput io, String byOrder) {
-		return io.readString(String.format("Enter %s operand: any number", byOrder), 
-					"Wrong operand", str -> str.matches("([0-9]*)\\.?([0-9]*)"));
-	}
-
 }
+				

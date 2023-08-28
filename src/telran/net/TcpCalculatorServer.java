@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.*;
+import java.util.Arrays;
 
 public class TcpCalculatorServer {
 	
@@ -11,6 +12,7 @@ public class TcpCalculatorServer {
 	
 	public static void main(String[] args) throws Exception {
 		ServerSocket serverSocket = new ServerSocket(PORT);
+		System.out.println("Server is listening to port" + PORT);
 		while(true) {
 			Socket socket = serverSocket.accept();
 			clientRun(socket);
@@ -38,22 +40,33 @@ public class TcpCalculatorServer {
 
 	private static String getResponse(String line) {
 		
-		String response = "Wrong request structure, usage: <operation symbol>#<1st operand>#<2nd operand";
+		String response = "Wrong request structure, usage: <operation type>#<operand 1>#<operand 2";
 		String[] tokens = line.split("#");
 		if(tokens.length == 3) {
-			response = switch (tokens[0]) {
-			case "+" -> Double.toString(getOperandDouble(tokens[1]) + getOperandDouble(tokens[2]));
-			case "-" -> Double.toString(getOperandDouble(tokens[1]) - getOperandDouble(tokens[2]));
-			case "*" -> Double.toString(getOperandDouble(tokens[1]) * getOperandDouble(tokens[2]));
-			case "/" -> Double.toString(getOperandDouble(tokens[1]) / getOperandDouble(tokens[2]));
-			default -> "wrong request";
-			};
+			try {
+				double[] operands = getOperands(tokens);
+				response  = switch(tokens[0]) {
+				case "add" -> Double.toString(operands[0] + operands[1]);
+				case "minus" -> Double.toString(operands[0] - operands[1]);
+				case "multiply" -> Double.toString(operands[0] * operands[1]);
+				case "divide" -> Double.toString(operands[0] / operands[1]);
+				default -> "Wrong request type";
+				};
+			} catch (Exception e) {
+				response = e.getMessage();
+			}
 		}
 		return response;
 	}
 
-	private static double getOperandDouble(String string) {
-		return Double.parseDouble(string);
+	private static double[] getOperands(String[] tokens) throws Exception {
+		try {
+			double op1 = Double.parseDouble(tokens[1]);
+			double op2 = Double.parseDouble(tokens[2]);
+			return new double[] {op1, op2};
+		} catch(NumberFormatException e) {
+			throw new Exception("all operands must be a numbers" + e.getMessage());
+			}
 		
 	}
 
